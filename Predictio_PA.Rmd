@@ -1,0 +1,83 @@
+---
+title: "prediction PA"
+author: "Daniil Tiniakov"
+output:
+  html_document: default
+  'html_document:': default
+---
+## Loading packages
+```{r}
+suppressMessages(library(caret))
+suppressMessages(library(randomForest))
+suppressMessages(library(rpart))
+suppressMessages(library(rattle))
+suppressMessages(library(gbm))
+
+```
+
+## Data processing
+# Loading and reading data
+```{r}
+download.file(url='https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',destfile = 'training.csv')
+download.file(url='https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv',destfile='testing.csv')
+training<-read.csv('training.csv',na.strings=c("NA","#DIV/0!",""))[,-(1:2)]
+testing<-read.csv('testing.csv',na.strings=c("NA","#DIV/0!",""))[,-(1:2)]
+# Without row index and username vars
+```
+
+# Creating cross-validation set
+```{r}
+set.seed(2445475)
+inTrain<-createDataPartition(y=training$classe, p=.5, list=FALSE)
+train.set<-training[inTrain,]
+cv.set<-training[-inTrain,]
+dim(train.set)
+```
+# Deleting vars with near0 variance prediction and with lot of NAs
+
+```{r}
+percent.NA<-colSums(is.na(train.set))/nrow(train.set)
+lots.NA<-which(percent.NA>.6)
+train.set<-train.set[,-lots.NA]
+train.set<-train.set[,-nearZeroVar(train.set)]
+train.set<-train.set[,-3]
+dim(train.set)
+```
+
+## Building models
+After some experiments with RAM i decided to stop on decision trees, random forest and LDA models
+```{r cache=TRUE}
+m1<-train(classe~.,data=train.set,method='rpart')
+m4<-randomForest(classe~.,data=train.set,type="class")
+m6<-train(classe~.,data=train.set,method='lda')
+```
+From confusion table lowest insample error is shown by RF model (100% accuracy),LDA model shows 85% accuracy, and decision tree model only 57% accuracy.
+```{r}
+pred1<-predict(m1,newdata=train.set)
+pred4<-predict(m4,newdata=train.set)
+pred6<-predict(m6,newdata=train.set)
+confusionMatrix(pred1,train.set$classe)$table
+confusionMatrix(pred4,train.set$classe)$table
+confusionMatrix(pred6,train.set$classe)$table
+
+```
+
+## Cross-validation (Out of sample error)
+Being aware of overfitting i decided to test models on cross-validation set.
+
+```{r}
+cv4<-predict(m4,newdata=cv.set)
+
+
+confusionMatrix(cv4,cv.set$classe)
+
+```
+Still RF model performs better (99.5% accuracy, Kappa values =.995)
+
+
+## Predictions using chosen RF model
+```{r}
+
+predict.test<-predict(m4,newdata=testing)
+predict.test
+```
