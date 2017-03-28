@@ -1,9 +1,9 @@
 ---
 title: "prediction PA"
 author: "Daniil Tiniakov"
-output:
-  html_document: default
-  'html_document:': default
+output: 
+  html_document:
+    keep_md: true
 ---
 ## Loading packages
 ```{r}
